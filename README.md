@@ -1,1 +1,146 @@
-# ENOFFMUS
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#111" />
+  <title>Enoffmus — All Channel Videos</title>
+  <style>
+    :root {
+      --bg: #111;
+      --card: #222;
+      --card-hover: #333;
+      --text: #eee;
+      --muted: #aaa;
+      --accent: #6ee7ff;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; }
+    a { color: var(--accent); }
+    header { text-align: center; padding: 20px; }
+    h1 { margin: 0; font-size: 2rem; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+    /* Grid */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+    .video { background: var(--card); border-radius: 10px; overflow: hidden; text-decoration: none; color: inherit; cursor: pointer; transition: background 0.2s ease; }
+    .video:hover { background: var(--card-hover); }
+    .thumb { position: relative; }
+    .thumb img { width: 100%; display: block; }
+    .meta { padding: 10px; }
+    .meta h3 { margin: 0 0 6px; font-size: 1rem; line-height: 1.25; }
+    .muted { font-size: 0.85rem; color: var(--muted); }
+
+    /* Buttons */
+    #loadMore { display: block; margin: 24px auto; padding: 10px 20px; background: #444; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; }
+    #loadMore:hover { background: #666; }
+    #loadMore[disabled] { opacity: 0.6; cursor: not-allowed; }
+
+    /* Empty / error states */
+    .center { text-align: center; color: var(--muted); padding: 20px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Enoffmus — All Videos</h1>
+    <p>Browse every upload from <a href="https://www.youtube.com/@Enoffmus" rel="noopener noreferrer" target="_blank">@Enoffmus</a>.</p>
+  </header>
+
+  <div class="container">
+    <div id="videos" class="grid" aria-live="polite"></div>
+    <button id="loadMore">Load More</button>
+    <p id="status" class="center" hidden>Loading…</p>
+  </div>
+
+  <script>
+    const API_KEY = "AIzaSyBf0Zu1QcjY32XzbIMH4wpHj0iFQz6OcW4";
+    const CHANNEL_ID = "UCBFnihm8Q7LtFzTHvFIhoNw";
+
+    let nextPageToken = "";
+    let uploadsPlaylistId = "";
+    const videosDiv = document.getElementById("videos");
+    const loadMoreBtn = document.getElementById("loadMore");
+    const statusP = document.getElementById("status");
+
+    function showStatus(msg) {
+      statusP.textContent = msg;
+      statusP.hidden = !msg;
+    }
+
+    async function getUploadsPlaylistId() {
+      const url = `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Channels request failed: ${res.status}`);
+      const data = await res.json();
+      if (!data.items || !data.items.length) throw new Error("Channel not found");
+      return data.items[0].contentDetails.relatedPlaylists.uploads;
+    }
+
+    function createVideoCard(item) {
+      const vid = item.snippet.resourceId.videoId;
+      const title = item.snippet.title;
+      const thumb = item.snippet.thumbnails && (item.snippet.thumbnails.maxres?.url || item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url);
+      const date = new Date(item.snippet.publishedAt).toLocaleDateString();
+
+      const card = document.createElement("a");
+      card.className = "video";
+      card.href = `https://www.youtube.com/watch?v=${vid}`;
+      card.target = "_blank";
+      card.rel = "noopener noreferrer";
+      card.innerHTML = `
+        <div class="thumb"><img src="${thumb}" alt="${title.replace(/"/g, '&quot;')}" loading="lazy"></div>
+        <div class="meta">
+          <h3 title="${title.replace(/"/g, '&quot;')}">${title}</h3>
+          <div class="muted">Uploaded ${date}</div>
+        </div>
+      `;
+      return card;
+    }
+
+    async function fetchUploads() {
+      try {
+        loadMoreBtn.disabled = true;
+        showStatus("Loading…");
+
+        if (!uploadsPlaylistId) {
+          uploadsPlaylistId = await getUploadsPlaylistId();
+        }
+
+        const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=12&playlistId=${uploadsPlaylistId}&key=${API_KEY}${nextPageToken ? `&pageToken=${nextPageToken}` : ""}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`PlaylistItems request failed: ${res.status}`);
+        const data = await res.json();
+
+        nextPageToken = data.nextPageToken || "";
+
+        if (!data.items || data.items.length === 0) {
+          if (!videosDiv.children.length) {
+            videosDiv.innerHTML = "<p class=\"center\">No videos found.</p>";
+          }
+          loadMoreBtn.style.display = "none";
+          return;
+        }
+
+        data.items.forEach((item) => {
+          const card = createVideoCard(item);
+          videosDiv.appendChild(card);
+        });
+
+        if (!nextPageToken) {
+          loadMoreBtn.style.display = "none";
+        }
+      } catch (err) {
+        console.error("Error fetching videos", err);
+        videosDiv.innerHTML = "<p class=\"center\">Could not load videos. Check your API key and quota.</p>";
+        loadMoreBtn.style.display = "none";
+      } finally {
+        loadMoreBtn.disabled = false;
+        showStatus("");
+      }
+    }
+
+    loadMoreBtn.addEventListener("click", fetchUploads);
+    fetchUploads();
+  </script>
+</body>
+</html>
