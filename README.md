@@ -1,102 +1,23 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Enoffmus — All Channel Videos</title>
-  <style>
-    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; }
-    header { text-align:center; padding:20px; }
-    h1 { margin:0; font-size:2rem; }
-    .container { max-width:1000px; margin:0 auto; padding:20px; }
-    .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(250px,1fr)); gap:16px; }
-    .video { background:#222; border-radius:10px; overflow:hidden; text-decoration:none; color:inherit; cursor:pointer; }
-    .video:hover { background:#333; }
-    .thumb img { width:100%; display:block; }
-    .meta { padding:10px; }
-    .meta h3 { margin:0 0 5px; font-size:1rem; }
-    .meta .muted { font-size:0.85rem; color:#aaa; }
-    #loadMore { display:block; margin:20px auto; padding:10px 20px; background:#444; color:#fff; border:none; border-radius:5px; cursor:pointer; }
-    #loadMore:hover { background:#666; }
-    .player-wrap { width:100%; aspect-ratio:16/9; background:#000; margin-bottom:20px; border-radius:10px; overflow:hidden; }
-    video { width:100%; height:100%; background:#000; display:block; }
-  </style>
-</head>
-<body>
-  <header>
-    <h1>Enoffmus — All Videos</h1>
-    <p>Browse every upload from <a href="https://www.youtube.com/@Enoffmus" style="color:#6ee7ff;">@Enoffmus</a>.</p>
-  </header>
-  <div class="container">
-    <!-- Native browser video player -->
-    <div class="player-wrap">
-      <video id="player" controls autoplay></video>
-    </div>
+Enoffmus — All Channel Videos
+A web application that lists and plays all videos from the @Enoffmus
+ YouTube channel. Users can browse uploads in a responsive grid layout and play videos directly in the embedded web player. Built with HTML, CSS, and JavaScript, leveraging the YouTube Data API for dynamic content loading.
 
-    <div id="videos" class="grid"></div>
-    <button id="loadMore">Load More</button>
-  </div>
+Features:
 
-  <script>
-    const API_KEY = "AIzaSyBf0Zu1QcjY32XzbIMH4wpHj0iFQz6OcW4";
-    const CHANNEL_ID = "UCBFnihm8Q7LtFzTHvFIhoNw";
-    let nextPageToken = "";
+Fetches all videos from a YouTube channel playlist dynamically
 
-    async function fetchUploads() {
-      try {
-        const channelRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${API_KEY}`);
-        const channelData = await channelRes.json();
-        const uploadsPlaylistId = channelData.items[0].contentDetails.relatedPlaylists.uploads;
+Responsive grid layout for video thumbnails
 
-        const playlistRes = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=12&playlistId=${uploadsPlaylistId}&key=${API_KEY}&pageToken=${nextPageToken}`);
-        const playlistData = await playlistRes.json();
-        nextPageToken = playlistData.nextPageToken || "";
+Embedded web player for watching videos directly in the browser
 
-        const videosDiv = document.getElementById("videos");
-        const player = document.getElementById("player");
+“Load More” button to paginate through all uploads
 
-        playlistData.items.forEach((item, index) => {
-          const vid = item.snippet.resourceId.videoId;
-          const title = item.snippet.title;
-          const thumb = item.snippet.thumbnails.medium.url;
-          const date = new Date(item.snippet.publishedAt).toLocaleDateString();
+Lightweight and easy to host
 
-          const videoCard = document.createElement("div");
-          videoCard.className = "video";
-          videoCard.innerHTML = `
-            <div class="thumb"><img src="${thumb}" alt="${title}"></div>
-            <div class="meta">
-              <h3>${title}</h3>
-              <div class="muted">Uploaded ${date}</div>
-            </div>
-          `;
+Tech Stack:
 
-          videoCard.addEventListener("click", () => {
-            // Play video inside native browser player
-            player.src = `https://www.youtube.com/watch?v=${vid}`;
-            player.play();
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          });
+HTML5 & CSS3
 
-          videosDiv.appendChild(videoCard);
+Vanilla JavaScript
 
-          if (!player.src && index === 0) {
-            player.src = `https://www.youtube.com/watch?v=${vid}`;
-          }
-        });
-
-        if (!nextPageToken) {
-          document.getElementById("loadMore").style.display = "none";
-        }
-      } catch (err) {
-        console.error("Error fetching videos", err);
-        document.getElementById("videos").innerHTML = "<p>Could not load videos. Check your API key.</p>";
-      }
-    }
-
-    document.getElementById("loadMore").addEventListener("click", fetchUploads);
-    fetchUploads();
-  </script>
-</body>
-</html>
-
+YouTube Data API v3
